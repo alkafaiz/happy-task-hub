@@ -9,10 +9,10 @@ interface DropzoneProps {
 
 function Dropzone({ onChange }: DropzoneProps) {
     const onDrop = useCallback(
-        (acceptedFiles) => {
+        (acceptedFiles: File[]) => {
             // Do something with the files
             const files = [];
-            acceptedFiles.forEach((file) => {
+            acceptedFiles.forEach((file: File) => {
                 const reader = new FileReader();
 
                 reader.onabort = () => console.log('file reading was aborted');
