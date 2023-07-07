@@ -1,10 +1,11 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Dropzone from '~/components/Dropzone';
 import dynamic from 'next/dynamic';
 import { DEFAULT_VALUES, MAX_FILES_COUNT } from '~/libs/constants';
 import { Modification } from '~/libs/types';
 import { addRemarkToDocument } from '~/libs/modifyPdf';
+import Loader from '~/components/Loader';
 
 const PreviewPanel = dynamic(() => import('~/components/PreviewPanel'), {
     ssr: false,
@@ -15,6 +16,8 @@ export default function Home() {
     const [results, setResults] = useState<File[]>([]);
     const [modifications, setModifications] = useState<Modification[]>([]);
     const [openPanel, setOpenPanel] = useState<'preview' | 'results'>('preview');
+    const [isLoading, setIsLoading] = useState(false);
+    const [progression, setProgression] = useState(0);
 
     const hasFile = selectedFiles.length > 0;
     const hasResult = results.length > 0;
@@ -55,10 +58,6 @@ export default function Home() {
         );
     };
 
-    useEffect(() => {
-        console.log(modifications);
-    }, [modifications]);
-
     const handleModificationChange = (index: number, modification: Modification) => {
         setModifications((prev) => {
             const newModifications = [...prev];
@@ -75,33 +74,46 @@ export default function Home() {
 
     const handleSubmit = async () => {
         console.log('submit');
+        setIsLoading(true);
+        try {
+            const newFiles = [];
 
-        const newFiles = [];
+            for (const [index, file] of selectedFiles.entries()) {
+                const modification = modifications[index];
+                const filename = modification.filename;
+                const remark = modification.remark.text;
+                const remarkPosition = modification.remark;
+                const remarkSize = modification.remarkSize;
 
-        for (const [index, file] of selectedFiles.entries()) {
-            const modification = modifications[index];
-            const filename = modification.filename;
-            const remark = modification.remark.text;
-            const remarkPosition = modification.remark;
-            const remarkSize = modification.remarkSize;
+                const fileArrayBuffer = await file.arrayBuffer();
 
-            const fileArrayBuffer = await file.arrayBuffer();
+                const added = await addRemarkToDocument(fileArrayBuffer, remark, {
+                    x: remarkPosition.x,
+                    y: remarkPosition.y,
+                    remarkWidth: remark ? remarkSize.width : 0,
+                    remarkHight: remark ? remarkSize.height : 0,
+                });
+                const pdfBlob = new Blob([new Uint8Array(added)], {
+                    type: 'document/pdf',
+                });
+                const newFile = new File([pdfBlob], filename, { type: 'document/pdf' });
 
-            const added = await addRemarkToDocument(fileArrayBuffer, remark, {
-                x: remarkPosition.x,
-                y: remarkPosition.y,
-                remarkWidth: remark ? remarkSize.width : 0,
-                remarkHight: remark ? remarkSize.height : 0,
-            });
-            const pdfBlob = new Blob([new Uint8Array(added)], {
-                type: 'document/pdf',
-            });
-            const newFile = new File([pdfBlob], filename, { type: 'document/pdf' });
-            newFiles.push(newFile);
+                // simulate delay
+                await new Promise((resolve) => setTimeout(resolve, 1400));
+
+                newFiles.push(newFile);
+                setProgression(Math.round(((index + 1) / selectedFiles.length) * 100));
+            }
+
+            setResults(newFiles);
+            setOpenPanel('results');
+        } catch (error) {
+            console.error(error);
+            alert('Something went wrong. Please try again.');
+        } finally {
+            setIsLoading(false);
+            setProgression(0);
         }
-
-        setResults(newFiles);
-        setOpenPanel('results');
     };
 
     const handleReset = () => {
@@ -239,6 +251,7 @@ export default function Home() {
                     <Dropzone onChange={handleFiles} />
                 </section>
             )}
+            {isLoading && <Loader totalFiles={selectedFiles.length} progression={progression} />}
         </main>
     );
 }
