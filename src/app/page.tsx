@@ -98,9 +98,6 @@ export default function Home() {
                 });
                 const newFile = new File([pdfBlob], filename, { type: 'document/pdf' });
 
-                // simulate delay
-                await new Promise((resolve) => setTimeout(resolve, 1400));
-
                 newFiles.push(newFile);
                 setProgression(Math.round(((index + 1) / selectedFiles.length) * 100));
             }
