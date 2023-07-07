@@ -7,4 +7,6 @@ const DEFAULT_VALUES = {
     remarkSize: { width: 0, height: 0 },
 };
 
-export { DEFAULT_VALUES };
+const MAX_FILES_COUNT = 10;
+
+export { DEFAULT_VALUES, MAX_FILES_COUNT };

@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Dropzone from '~/components/Dropzone';
 import dynamic from 'next/dynamic';
-import { DEFAULT_VALUES } from '~/libs/constants';
+import { DEFAULT_VALUES, MAX_FILES_COUNT } from '~/libs/constants';
 import { Modification } from '~/libs/types';
 import { addRemarkToDocument } from '~/libs/modifyPdf';
 
@@ -20,12 +20,37 @@ export default function Home() {
     const hasResult = results.length > 0;
 
     const handleFiles = (files: File[]) => {
+        // handle max files
+        const currentFileCount = selectedFiles.length;
+
+        if (currentFileCount + files.length > MAX_FILES_COUNT) {
+            alert(`You can only modify ${MAX_FILES_COUNT} files at a time.`);
+            return;
+        }
+
+        const defaultModification = {
+            remark: { text: '', ...DEFAULT_VALUES.remarkPosition },
+            remarkSize: { ...DEFAULT_VALUES.remarkSize },
+        };
+
+        // handle merge of existing files;
+        if (currentFileCount > 0) {
+            setSelectedFiles((curr) => [...curr, ...files]);
+            setModifications((curr) => [
+                ...curr,
+                ...files.map((file) => ({
+                    filename: file.name,
+                    ...defaultModification,
+                })),
+            ]);
+            return;
+        }
+
         setSelectedFiles(files);
         setModifications(
             files.map((file) => ({
                 filename: file.name,
-                remark: { text: '', ...DEFAULT_VALUES.remarkPosition },
-                remarkSize: { ...DEFAULT_VALUES.remarkSize },
+                ...defaultModification,
             }))
         );
     };
@@ -111,8 +136,12 @@ export default function Home() {
                                     <ol>
                                         {results.map((file, index) => (
                                             <li key={file.name}>
-                                                <a className='text-blue-800 hover:text-blue-900 hover:underline cursor-pointer'
-                                                href={URL.createObjectURL(file)} download={file.name} title={`Click to download ${file.name}`}>
+                                                <a
+                                                    className="text-blue-800 hover:text-blue-900 hover:underline cursor-pointer"
+                                                    href={URL.createObjectURL(file)}
+                                                    download={file.name}
+                                                    title={`Click to download ${file.name}`}
+                                                >
                                                     {file.name}
                                                 </a>
                                             </li>
